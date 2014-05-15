@@ -146,10 +146,12 @@ test: install
 ack:
 	cp results/*.out test/expected/
 
-deb:
-	rm -f debian/control
-	make -f debian/rules debian/control
-	debuild -uc -us -b
+deb%:
+	cp debian/changelog.in debian/changelog
+	dch -v $(DISTVERSION)-$(shell git describe --tags | sed -e s,plproxy_,, -e s,_,.,g -e s,-,.,g ) "Automatically built package"
+	sed -e s/PGVERSION/$(subst deb,,$@)/g < debian/control.in > debian/control
+	echo $(subst deb,,$@) > debian/pgversions
+	dpkg-buildpackage -uc -us
 
 debclean:
 	$(MAKE) -f debian/rules realclean
