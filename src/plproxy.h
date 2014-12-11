@@ -187,6 +187,7 @@ typedef struct ProxyConfig
 	int			keepidle;
 	int			keepintvl;
 	int			keepcnt;
+	int			modulo_hashing; /* Allow non power of 2 partition counts */
 	char		default_user[NAMEDATALEN];
 } ProxyConfig;
 
@@ -237,7 +238,7 @@ typedef struct ProxyConnection
 	int			run_tag;
 
 	/*
-	 * Per-connection parameters. These are a assigned just before the 
+	 * Per-connection parameters. These are a assigned just before the
 	 * remote call is made.
 	 */
 
@@ -257,7 +258,7 @@ typedef struct ProxyCluster
 	int			version;		/* Cluster version */
 	ProxyConfig config;			/* Cluster config */
 
-	int			part_count;		/* Number of partitions - power of 2 */
+	int			part_count;		/* Number of partitions needs to be power of 2 unless used with config option modulo_hashing */
 	int			part_mask;		/* Mask to use to get part number from hash */
 	ProxyConnection **part_map; /* Pointers to ProxyConnections */
 

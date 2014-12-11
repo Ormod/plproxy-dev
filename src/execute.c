@@ -903,7 +903,7 @@ static void tag_part(struct ProxyCluster *cluster, int i, int tag)
 }
 
 /*
- * Run hash function and tag connections. If any of the hash function 
+ * Run hash function and tag connections. If any of the hash function
  * arguments are mentioned in the split_arrays an element of the array
  * is used instead of the actual array.
  */
@@ -911,10 +911,11 @@ static void
 tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 					DatumArray **array_params, int array_row)
 {
-	int			i;
+
 	TupleDesc	desc;
 	Oid			htype;
 	ProxyCluster *cluster = func->cur_cluster;
+	int			i, partition_count = cluster->part_mask + 1;
 
 	/* execute cached plan */
 	plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
@@ -942,8 +943,10 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			hashval = DatumGetInt16(val);
 		else
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
-
-		hashval &= cluster->part_mask;
+		if (cluster->config.modulo_hashing)
+			hashval = ((hashval % partition_count) + partition_count) % partition_count;
+		else
+			hashval &= cluster->part_mask;
 		tag_part(cluster, hashval, tag);
 	}
 
@@ -1004,7 +1007,10 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
-			i = random() & cluster->part_mask;
+			if (cluster->config.modulo_hashing)
+				i = random() % (cluster->part_mask + 1);
+			else
+				i = random() & cluster->part_mask;
 			tag_part(cluster, i, tag);
 			break;
 		default:
@@ -1013,7 +1019,7 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 }
 
 /*
- * Tag the partitions to be run on, if split is requested prepare the 
+ * Tag the partitions to be run on, if split is requested prepare the
  * per-partition split array parameters.
  *
  * This is done by looping over all of the split arrays side-by-side, for each

@@ -71,6 +71,7 @@ static const char *cluster_config_options[] = {
 	"keepalive_idle",
 	"keepalive_interval",
 	"keepalive_count",
+	"modulo_hashing",
 	NULL
 };
 
@@ -80,7 +81,8 @@ PG_FUNCTION_INFO_V1(plproxy_fdw_validator);
 #endif
 
 /*
- * Connection count should be non-zero and power of 2.
+ * Connection count should be non-zero and power of 2 unless
+ * modulo_hashing is used.
  */
 static bool
 check_valid_partcount(int n)
@@ -315,6 +317,8 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->keepcnt = atoi(val);
 	else if (pg_strcasecmp("default_user", key) == 0)
 		snprintf(cf->default_user, sizeof(cf->default_user), "%s", val);
+	else if (pg_strcasecmp("modulo_hashing", key) == 0)
+		cf->modulo_hashing = atoi(val);
 	else
 		plproxy_error(func, "Unknown config param: %s", key);
 }
@@ -400,7 +404,8 @@ reload_parts(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 	err = SPI_execute_plan(partlist_plan, &dname, NULL, false, 0);
 	if (err != SPI_OK_SELECT)
 		plproxy_error(func, "get_partlist: spi error");
-	if (!check_valid_partcount(SPI_processed))
+
+	if (!cluster->config.modulo_hashing && !check_valid_partcount(SPI_processed))
 		plproxy_error(func, "get_partlist: invalid part count");
 
 	/* check column types */
@@ -543,7 +548,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("Pl/Proxy: invalid number of partitions"),
-					 errhint("the number of partitions in a cluster must be power of 2 (attempted %d)", part_count)));
+					 errhint("the number of partitions in a cluster must be power of 2 unless modulo_hashing is used(attempted %d)", part_count)));
 	}
 
 	PG_RETURN_BOOL(true);
@@ -691,8 +696,7 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 		else
 			set_config_key(func, &cluster->config, def->defname, strVal(def->arg));
 	}
-
-	if (!check_valid_partcount(part_count))
+	if (!cluster->config.modulo_hashing && !check_valid_partcount(part_count))
 		plproxy_error(func, "invalid partition count");
 
 	/*
@@ -864,8 +868,8 @@ reload_plproxy_cluster(ProxyFunction *func, ProxyCluster *cluster)
 	/* update if needed */
 	if (cur_version != cluster->version || cluster->needs_reload)
 	{
-		reload_parts(cluster, dname, func);
 		get_config(cluster, dname, func);
+		reload_parts(cluster, dname, func);
 		cluster->version = cur_version;
 	}
 }

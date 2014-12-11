@@ -25,13 +25,13 @@ plproxy.get_cluster_version(cluster_name text)
 returns integer
 ----------------------
 
-The get_cluster_version function is called on each request, it should return 
-the version number of the current configuration for a particular cluster.  
-If the version number returned by this function is higher than the one plproxy 
+The get_cluster_version function is called on each request, it should return
+the version number of the current configuration for a particular cluster.
+If the version number returned by this function is higher than the one plproxy
 has cached, then the configuration and partition information will be reloaded
 by calling the get_cluster_config() and get_cluster_paritions() functions.
 
-This is an example function that does not lookup the version number for an 
+This is an example function that does not lookup the version number for an
 external source such as a configuration table.
 
 ----------------------
@@ -55,14 +55,16 @@ plproxy.get_cluster_partitions(cluster_name text)
 returns setof text
 ----------------------
 
-This is called when a new partition configuration needs to be loaded. 
+This is called when a new partition configuration needs to be loaded.
 It should return connect strings to the partitions in the cluster.
 The connstrings should be returned in the correct order.  The total
-number of connstrings returned must be a power of 2.  If two or more
-connstrings are equal then they will use the same connection.
+number of connstrings returned must be a power of 2 unless modulo
+hashing is used. With modulo hashing arbitrary partition counts
+are possible. If two or more connstrings are equal then they will
+use the same connection.
 
 If the string "user=" does not appear in a connect string then
-user=CURRENT_USER will be appended to the connection string by PL/Proxy.  
+user=CURRENT_USER will be appended to the connection string by PL/Proxy.
 This will cause PL/Proxy to connect to the partition database using
 the same username as was used to connect to the proxy database.
 This also avoids the accidental 'user=postgres' connections.
@@ -105,7 +107,7 @@ $$ LANGUAGE plpgsql;
 ----------------------
 
 === plproxy.get_cluster_config(cluster) ===
- 
+
 ----------------------
 plproxy.get_cluster_config(
 	IN cluster_name text,
@@ -114,18 +116,18 @@ plproxy.get_cluster_config(
 RETURNS SETOF record
 ----------------------
 
-The get_cluster_config function returns a set of key-value pairs that can 
-consist of any of the following configuration parameters.  All of them are 
+The get_cluster_config function returns a set of key-value pairs that can
+consist of any of the following configuration parameters.  All of them are
 optional. Timeouts/lifetime values are given in seconds.  If the value is 0
 or NULL then the parameter is disabled (a default value will be used).
 
 
   connection_lifetime::
 
-  
+
 	The maximum age a connection (in seconds) to a remote database will be kept
-	open for. If this is disabled (0) then connections to remote databases will 
-	be kept open as long as they are valid. Otherwise once a connection reaches 
+	open for. If this is disabled (0) then connections to remote databases will
+	be kept open as long as they are valid. Otherwise once a connection reaches
 	the age indicated it will be closed.
 
   query_timeout::
@@ -147,6 +149,11 @@ or NULL then the parameter is disabled (a default value will be used).
   keepalive_interval::
 
 	TCP keepalive - interval between keepalive packets.  In seconds.
+
+  modulo_hashing::
+
+	Set to 1 to use modulo hashing instead of bitwise AND in order
+	to allow non power of two partition counts for the cluster.
 
   keepalive_count::
 
