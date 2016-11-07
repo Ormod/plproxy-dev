@@ -1,4 +1,4 @@
-Name:           plproxy
+Name:           plproxy96
 Version:        %{major_version}
 Release:        %{minor_version}%{?dist}
 Summary:        PostgreSQL partitioning system
@@ -16,7 +16,8 @@ remote function to be called, so only destination info needs to be specified
 inside proxy function body.
 
 %prep
-%setup -q -n %{name}
+%setup -q -n plproxy 
+#%{name}
 
 %build
 make
@@ -34,8 +35,8 @@ EXTVERSION=%{ext_version} ./runtests.sh
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS COPYRIGHT NEWS.md README.md doc/*
-%{_libdir}/pgsql/plproxy.so
-%{_datadir}/pgsql/extension/plproxy*
+/usr/pgsql-9.6/lib/plproxy.so
+/usr/pgsql-9.6/share/extension/plproxy*
 
 %changelog
 * Wed Aug 21 2013 Oskari Saarenmaa <os@ohmu.fi> - 2.5-8.g294e9a5
