@@ -33,7 +33,7 @@ EXTVERSION=%{ext_version} ./runtests.sh
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS COPYRIGHT NEWS README doc/*
+%doc AUTHORS COPYRIGHT NEWS.md README.md doc/*
 %{_libdir}/pgsql/plproxy.so
 %{_datadir}/pgsql/extension/plproxy*
 
