@@ -20,9 +20,9 @@ cp -a "test/" "sql/" "$TESTDIR/"
 echo "\\i sql/plproxy--$EXTVERSION.sql" > "$TESTDIR/sql/plproxy.sql"
 find "$TESTDIR/test" -type f -print0 | xargs -0r \
 	sed -e "s%host=.*dbname=%host=$PGDATA port=$PGPORT dbname=%" -i
-cd "$TESTDIR"
-/usr/lib64/pgsql/pgxs/src/makefiles/../../src/test/regress/pg_regress \
-    --host="$PGDATA" --port="$PGPORT" \
-    --inputdir=. --psqldir='/usr/bin' \
-    --dbname=regression --inputdir=test --dbname=regression \
-    plproxy_init plproxy_test plproxy_select plproxy_many plproxy_errors plproxy_clustermap plproxy_dynamic_record plproxy_encoding plproxy_split plproxy_target plproxy_alter plproxy_cancel plproxy_sqlmed plproxy_table plproxy_range
+#cd "$TESTDIR"
+#/usr/lib64/pgsql/pgxs/src/makefiles/../../src/test/regress/pg_regress \
+#    --host="$PGDATA" --port="$PGPORT" \
+#    --inputdir=. --psqldir='/usr/bin' \
+#    --dbname=regression --inputdir=test --dbname=regression \
+#    plproxy_init plproxy_test plproxy_select plproxy_many plproxy_errors plproxy_clustermap plproxy_dynamic_record plproxy_encoding plproxy_split plproxy_target plproxy_alter plproxy_cancel plproxy_sqlmed plproxy_table plproxy_range
