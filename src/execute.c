@@ -375,6 +375,39 @@ handle_notice(void *arg, const PGresult *res)
 	plproxy_remote_error(cluster->cur_func, conn, res, false);
 }
 
+static void
+plproxy_connstr_check(const char *connstr)
+{
+      /* Adapted from dblink_connstr_check from PG contrib */
+      PQconninfoOption *options;
+      PQconninfoOption *option;
+      bool            connstr_gives_password = false;
+
+      options = PQconninfoParse(connstr, NULL);
+      if (options)
+	{
+	  for (option = options; option->keyword != NULL; option++)
+	    {
+	      if (strcmp(option->keyword, "password") == 0)
+		{
+		  if (option->val != NULL && option->val[0] != '\0')
+		    {
+		      connstr_gives_password = true;
+		      break;
+		    }
+		}
+	    }
+	  PQconninfoFree(options);
+	}
+
+      if (!connstr_gives_password)
+	ereport(ERROR,
+		(errcode(ERRCODE_S_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED),
+		 errmsg("password is required"),
+		 errdetail("Non-superuser cannot connect if the server does not request a password."),
+		 errhint("Target server's authentication method must be changed.")));
+}
+
 static const char *
 get_connstr(ProxyConnection *conn)
 {
@@ -427,6 +460,9 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 
 	/* launch new connection */
 	connstr = get_connstr(conn);
+	/* Check that it contains a password */
+	plproxy_connstr_check(connstr);
+
 	conn->cur->db = PQconnectStart(connstr);
 	if (conn->cur->db == NULL)
 		plproxy_error(func, "No memory for PGconn");
@@ -903,7 +939,7 @@ static void tag_part(struct ProxyCluster *cluster, int i, int tag)
 }
 
 /*
- * Run hash function and tag connections. If any of the hash function 
+ * Run hash function and tag connections. If any of the hash function
  * arguments are mentioned in the split_arrays an element of the array
  * is used instead of the actual array.
  */
@@ -1013,7 +1049,7 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 }
 
 /*
- * Tag the partitions to be run on, if split is requested prepare the 
+ * Tag the partitions to be run on, if split is requested prepare the
  * per-partition split array parameters.
  *
  * This is done by looping over all of the split arrays side-by-side, for each
@@ -1285,5 +1321,3 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 	PG_END_TRY();
 }
-
-
